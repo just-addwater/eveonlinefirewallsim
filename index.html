@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EVE Online - Firewalling Simulator</title>
+    <meta name="description" content="Practice missile firewalling mechanics from EVE Online in this 3D web simulator">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+    <!-- Loading Screen -->
+    <div id="loading-screen">
+        <div class="loading-content">
+            <h1>EVE ONLINE FIREWALLING SIMULATOR</h1>
+            <div class="loading-bar">
+                <div class="loading-progress" id="loading-progress"></div>
+            </div>
+            <p id="loading-text">Initializing simulation...</p>
+        </div>
+    </div>
+
+    <!-- Main Game Container -->
+    <div id="game-container">
+        <!-- 3D Canvas -->
+        <canvas id="game-canvas"></canvas>
+
+        <!-- HUD Overlay -->
+        <div id="hud">
+            <!-- Top Bar -->
+            <div id="top-bar">
+                <div class="ship-status">
+                    <h2>BATTLESHIP</h2>
+                    <div class="status-bar">
+                        <span>Shield:</span>
+                        <div class="bar">
+                            <div class="bar-fill shield-bar" id="shield-bar"></div>
+                        </div>
+                        <span id="shield-value">100%</span>
+                    </div>
+                    <div class="status-bar">
+                        <span>Armor:</span>
+                        <div class="bar">
+                            <div class="bar-fill armor-bar" id="armor-bar"></div>
+                        </div>
+                        <span id="armor-value">100%</span>
+                    </div>
+                    <div class="status-bar">
+                        <span>Capacitor:</span>
+                        <div class="bar">
+                            <div class="bar-fill cap-bar" id="cap-bar"></div>
+                        </div>
+                        <span id="cap-value">100%</span>
+                    </div>
+                </div>
+
+                <div class="module-status">
+                    <h3>MODULES</h3>
+                    <div class="module" id="smartbomb-status">
+                        <span class="module-icon">💣</span>
+                        <span>Smartbomb</span>
+                        <span class="module-state" id="smartbomb-state">OFFLINE</span>
+                    </div>
+                    <div class="module" id="ab-status">
+                        <span class="module-icon">🔥</span>
+                        <span>Afterburner</span>
+                        <span class="module-state" id="ab-state">OFFLINE</span>
+                    </div>
+                    <div class="module" id="mwd-status">
+                        <span class="module-icon">⚡</span>
+                        <span>MWD</span>
+                        <span class="module-state" id="mwd-state">OFFLINE</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Overview Panel -->
+            <div id="overview-panel">
+                <div class="panel-header">
+                    <h3>OVERVIEW</h3>
+                    <button id="overview-toggle">▼</button>
+                </div>
+                <div class="panel-content" id="overview-content">
+                    <table id="overview-table">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Distance</th>
+                                <th>Velocity</th>
+                                <th>Type</th>
+                            </tr>
+                        </thead>
+                        <tbody id="overview-tbody">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Statistics Panel -->
+            <div id="stats-panel">
+                <h3>FIREWALLING STATISTICS</h3>
+                <div class="stat-row">
+                    <span>Missiles Launched:</span>
+                    <span id="missiles-launched">0</span>
+                </div>
+                <div class="stat-row">
+                    <span>Missiles Destroyed:</span>
+                    <span id="missiles-destroyed">0</span>
+                </div>
+                <div class="stat-row">
+                    <span>Efficiency:</span>
+                    <span id="efficiency">0%</span>
+                </div>
+                <div class="stat-row">
+                    <span>Smartbomb Cycles:</span>
+                    <span id="smartbomb-cycles">0</span>
+                </div>
+                <div class="efficiency-bar">
+                    <div class="efficiency-fill" id="efficiency-fill"></div>
+                </div>
+                <div id="tip-box">
+                    <strong>TIP:</strong> <span id="current-tip">Position between fleet and enemies for optimal
+                        coverage</span>
+                </div>
+            </div>
+
+            <!-- Speed Indicator -->
+            <div id="speed-indicator">
+                <div class="speed-value" id="speed-value">0 m/s</div>
+                <div class="speed-label">VELOCITY</div>
+            </div>
+
+            <!-- Radial Menu (Hidden by default) -->
+            <div id="radial-menu" class="hidden">
+                <div class="radial-option" data-action="approach">Approach</div>
+                <div class="radial-option" data-action="orbit">Orbit at 5km</div>
+                <div class="radial-option" data-action="keeprange">Keep at Range 10km</div>
+                <div class="radial-option" data-action="stop">Stop Ship</div>
+            </div>
+        </div>
+
+        <!-- Controls Help -->
+        <div id="controls-help">
+            <button id="help-toggle">?</button>
+            <div id="help-content" class="hidden">
+                <h3>CONTROLS</h3>
+                <ul>
+                    <li><strong>Left Click:</strong> Navigate / Select</li>
+                    <li><strong>Right Click:</strong> Radial Menu</li>
+                    <li><strong>Mouse Drag:</strong> Rotate Camera</li>
+                    <li><strong>Mouse Wheel:</strong> Zoom</li>
+                    <li><strong>SPACE:</strong> Toggle Smartbomb</li>
+                    <li><strong>A:</strong> Toggle Afterburner</li>
+                    <li><strong>SHIFT:</strong> Activate MWD (10s)</li>
+                    <li><strong>TAB:</strong> Toggle Overview</li>
+                    <li><strong>ESC:</strong> Cancel Selection</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Three.js Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <!-- Game Scripts -->
+    <script type="module" src="js/Utils.js"></script>
+    <script type="module" src="js/Missile.js"></script>
+    <script type="module" src="js/Smartbomb.js"></script>
+    <script type="module" src="js/Battleship.js"></script>
+    <script type="module" src="js/EnemyShip.js"></script>
+    <script type="module" src="js/InputController.js"></script>
+    <script type="module" src="js/HUD.js"></script>
+    <script type="module" src="js/SimulationManager.js"></script>
+    <script type="module" src="js/main.js"></script>
+</body>
+
+</html>
