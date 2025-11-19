@@ -12,71 +12,57 @@ export class Missile {
         this.target = target;
         this.launcherId = launcherId;
 
-        // Missile stats (EVE Online heavy missile approximation)
         this.maxHP = 120;
         this.currentHP = 120;
-        this.velocity = 3000; // m/s
-        this.explosionRadius = 125; // meters
-        this.explosionVelocity = 150; // m/s
+        this.velocity = 3000;
+        this.explosionRadius = 125;
+        this.explosionVelocity = 150;
         this.baseDamage = 500;
         this.flightTime = 0;
-        this.maxFlightTime = 20; // seconds
+        this.maxFlightTime = 20;
 
         this.alive = true;
         this.hasImpacted = false;
 
-        // Create 3D representation
         this.createMesh();
     }
 
     createMesh() {
-        // Missile body
-        const geometry = new THREE.CylinderGeometry(2, 2, 15, 8);
-        const material = new THREE.MeshPhongMaterial({
-            color: 0xff6600,
-            emissive: 0xff3300,
-            emissiveIntensity: 0.5
-        });
+        this.mesh = new THREE.Group();
 
-        this.mesh = new THREE.Mesh(geometry, material);
-        this.mesh.rotation.x = Math.PI / 2;
-        this.mesh.position.set(this.position.x, this.position.y, this.position.z);
+        // Optimized missile body
+        const bodyGeometry = new THREE.CylinderGeometry(2, 3, 10, 4);
+        const bodyMaterial = new THREE.MeshBasicMaterial({ color: 0xffaa00 });
+        const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+        body.rotation.z = Math.PI / 2;
+        this.mesh.add(body);
 
-        // Add trail
-        const trailGeometry = new THREE.CylinderGeometry(0.5, 1.5, 25, 8);
+        // Optimized trail
+        const trailGeometry = new THREE.CylinderGeometry(1, 2, 20, 4);
         const trailMaterial = new THREE.MeshBasicMaterial({
-            color: 0xffaa00,
+            color: 0xff6600,
             transparent: true,
-            opacity: 0.6
+            opacity: 0.4
         });
+        const trail = new THREE.Mesh(trailGeometry, trailMaterial);
+        trail.rotation.z = Math.PI / 2;
+        trail.position.x = -15;
+        this.mesh.add(trail);
 
-        this.trail = new THREE.Mesh(trailGeometry, trailMaterial);
-        this.trail.rotation.x = Math.PI / 2;
-        this.trail.position.z = -20;
-        this.mesh.add(this.trail);
-
-        // Add point light for glow
-        const light = new THREE.PointLight(0xff6600, 1, 100);
-        this.mesh.add(light);
-
+        this.mesh.position.set(this.position.x, this.position.y, this.position.z);
         this.scene.add(this.mesh);
     }
 
-    /**
-     * Update missile position (called on each tick)
-     */
     update(deltaTime) {
         if (!this.alive || !this.target) return;
 
         this.flightTime += deltaTime;
 
-        // Check max flight time
         if (this.flightTime >= this.maxFlightTime) {
             this.destroy('timeout');
             return;
         }
 
-        // Calculate direction to target
         const targetPos = this.target.position;
         const direction = {
             x: targetPos.x - this.position.x,
@@ -85,29 +71,20 @@ export class Missile {
         };
 
         const normalized = Utils.normalize(direction);
-
-        // Move towards target
         const distance = this.velocity * deltaTime;
         this.position.x += normalized.x * distance;
         this.position.y += normalized.y * distance;
         this.position.z += normalized.z * distance;
 
-        // Update mesh position and rotation
         this.mesh.position.set(this.position.x, this.position.y, this.position.z);
-
-        // Point missile towards target
         this.mesh.lookAt(targetPos.x, targetPos.y, targetPos.z);
 
-        // Check if reached target
         const distToTarget = Utils.distance3D(this.position, targetPos);
         if (distToTarget < 50) {
             this.impact();
         }
     }
 
-    /**
-     * Take damage from smartbomb
-     */
     takeDamage(damage) {
         if (!this.alive) return false;
 
@@ -121,16 +98,12 @@ export class Missile {
         return false;
     }
 
-    /**
-     * Missile impacts target
-     */
     impact() {
         if (this.hasImpacted || !this.alive) return;
 
         this.hasImpacted = true;
 
-        // Calculate damage based on EVE formula
-        const targetVelocity = this.target.velocity || 0;
+        const targetVelocity = this.target.currentSpeed || 0;
         const targetSigRadius = this.target.signatureRadius || 400;
 
         const damage = Utils.calculateMissileDamage(
@@ -141,7 +114,6 @@ export class Missile {
             this.explosionVelocity
         );
 
-        // Apply damage to target
         if (this.target.takeDamage) {
             this.target.takeDamage(damage);
         }
@@ -149,32 +121,26 @@ export class Missile {
         this.destroy('impact');
     }
 
-    /**
-     * Destroy missile
-     */
     destroy(reason) {
         if (!this.alive) return;
 
         this.alive = false;
-
-        // Create explosion effect
         this.createExplosion();
 
-        // Remove mesh after short delay
         setTimeout(() => {
             if (this.mesh) {
                 this.scene.remove(this.mesh);
-                this.mesh.geometry.dispose();
-                this.mesh.material.dispose();
+                this.mesh.traverse((child) => {
+                    if (child.geometry) child.geometry.dispose();
+                    if (child.material) child.material.dispose();
+                });
             }
-        }, 500);
+        }, 100);
     }
 
-    /**
-     * Create explosion visual effect
-     */
     createExplosion() {
-        const geometry = new THREE.SphereGeometry(10, 16, 16);
+        // Optimized explosion
+        const geometry = new THREE.SphereGeometry(15, 8, 8);
         const material = new THREE.MeshBasicMaterial({
             color: 0xff6600,
             transparent: true,
@@ -185,7 +151,6 @@ export class Missile {
         explosion.position.set(this.position.x, this.position.y, this.position.z);
         this.scene.add(explosion);
 
-        // Animate explosion
         let scale = 0.1;
         const interval = setInterval(() => {
             scale += 0.2;
@@ -201,9 +166,6 @@ export class Missile {
         }, 50);
     }
 
-    /**
-     * Get missile info for HUD
-     */
     getInfo() {
         return {
             id: this.mesh?.id || 0,

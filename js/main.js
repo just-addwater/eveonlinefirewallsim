@@ -96,11 +96,11 @@ class FirewallingSimulator {
         directionalLight.position.set(1, 1, 1);
         this.scene.add(directionalLight);
 
-        // Add starfield
+        // Add starfield (optimized)
         this.createStarfield();
 
-        // Add grid for reference
-        const gridHelper = new THREE.GridHelper(100000, 100, 0x00d4ff, 0x003344);
+        // Add grid for reference (optimized)
+        const gridHelper = new THREE.GridHelper(50000, 50, 0x00d4ff, 0x003344);
         gridHelper.rotation.x = Math.PI / 2;
         this.scene.add(gridHelper);
 
@@ -111,11 +111,11 @@ class FirewallingSimulator {
     }
 
     /**
-     * Create starfield background
+     * Create starfield background (optimized)
      */
     createStarfield() {
         const starGeometry = new THREE.BufferGeometry();
-        const starCount = 10000;
+        const starCount = 2000; // Reduced from 10,000
         const positions = new Float32Array(starCount * 3);
 
         for (let i = 0; i < starCount * 3; i += 3) {
@@ -128,7 +128,7 @@ class FirewallingSimulator {
 
         const starMaterial = new THREE.PointsMaterial({
             color: 0xffffff,
-            size: 2,
+            size: 3,
             transparent: true,
             opacity: 0.8
         });
@@ -201,11 +201,6 @@ class FirewallingSimulator {
             this.enemies,
             (battleship, enemies, missiles, stats) => {
                 this.hud.update(battleship, enemies, missiles, stats);
-
-                // Check for new missile launches
-                enemies.forEach(enemy => {
-                    // Missiles are launched in enemy.update()
-                });
             }
         );
 
@@ -224,8 +219,8 @@ class FirewallingSimulator {
      * Handle radial menu actions
      */
     handleRadialMenuAction(action) {
-        // This would navigate to selected position based on action
         console.log('Radial menu action:', action);
+        // Placeholder for future radial menu actions
     }
 
     /**
@@ -244,18 +239,6 @@ class FirewallingSimulator {
         // Update camera to follow battleship
         if (this.inputController) {
             this.inputController.updateCamera();
-        }
-
-        // Handle enemy missile launches
-        if (this.enemies && this.simulationManager) {
-            this.enemies.forEach(enemy => {
-                if (enemy.missileTimer <= 0) {
-                    const missiles = enemy.launchMissileVolley();
-                    if (missiles.length > 0) {
-                        this.simulationManager.addMissiles(missiles);
-                    }
-                }
-            });
         }
 
         // Render scene

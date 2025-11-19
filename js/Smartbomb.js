@@ -10,35 +10,30 @@ export class Smartbomb {
         this.scene = scene;
         this.owner = owner;
 
-        // Smartbomb stats (EVE Online large smartbomb)
-        this.range = 7500; // meters (7.5km)
-        this.damage = 200; // per activation
-        this.cycleTime = 3000; // ms (3 seconds)
-        this.capacitorCost = 600; // cap units per cycle
+        this.range = 7500;
+        this.damage = 200;
+        this.cycleTime = 3000;
+        this.capacitorCost = 600;
 
         this.isActive = false;
         this.isCycling = false;
         this.cooldownRemaining = 0;
         this.activationCount = 0;
 
-        // Visual effect meshes
         this.rangeIndicator = null;
         this.explosionEffect = null;
 
         this.createRangeIndicator();
     }
 
-    /**
-     * Create visual range indicator
-     */
     createRangeIndicator() {
-        const geometry = new THREE.SphereGeometry(this.range, 32, 32);
+        // Optimized range indicator
+        const geometry = new THREE.SphereGeometry(this.range, 16, 16);
         const material = new THREE.MeshBasicMaterial({
-            color: 0xff6600,
+            color: 0x00d4ff,
             transparent: true,
             opacity: 0.15,
-            wireframe: true,
-            side: THREE.DoubleSide
+            wireframe: true
         });
 
         this.rangeIndicator = new THREE.Mesh(geometry, material);
@@ -46,9 +41,6 @@ export class Smartbomb {
         this.scene.add(this.rangeIndicator);
     }
 
-    /**
-     * Update smartbomb position to follow owner
-     */
     update() {
         if (this.owner && this.owner.position) {
             this.rangeIndicator.position.set(
@@ -58,38 +50,27 @@ export class Smartbomb {
             );
         }
 
-        // Update cooldown
         if (this.cooldownRemaining > 0) {
-            this.cooldownRemaining -= 1000; // Tick rate (1 second)
+            this.cooldownRemaining -= 1000;
             if (this.cooldownRemaining <= 0) {
                 this.isCycling = false;
             }
         }
     }
 
-    /**
-     * Activate smartbomb
-     */
     activate(missiles) {
         if (this.isCycling) return { success: false, reason: 'cycling' };
 
-        // Check capacitor
         if (this.owner.currentCapacitor < this.capacitorCost) {
             return { success: false, reason: 'no_cap' };
         }
 
-        // Drain capacitor
         this.owner.currentCapacitor -= this.capacitorCost;
-
-        // Set cycling state
         this.isCycling = true;
         this.cooldownRemaining = this.cycleTime;
         this.activationCount++;
 
-        // Apply damage to missiles in range
         const missilesDestroyed = this.applyDamage(missiles);
-
-        // Create visual effect
         this.createExplosionEffect();
 
         return {
@@ -99,9 +80,6 @@ export class Smartbomb {
         };
     }
 
-    /**
-     * Apply damage to all entities in range
-     */
     applyDamage(missiles) {
         if (!missiles || !this.owner) return 0;
 
@@ -122,17 +100,14 @@ export class Smartbomb {
         return destroyedCount;
     }
 
-    /**
-     * Create explosion visual effect
-     */
     createExplosionEffect() {
-        // Create expanding sphere
-        const geometry = new THREE.SphereGeometry(100, 32, 32);
+        // Optimized explosion effect
+        const geometry = new THREE.SphereGeometry(100, 12, 12);
         const material = new THREE.MeshBasicMaterial({
-            color: 0xff6600,
+            color: 0x00d4ff,
             transparent: true,
             opacity: 0.6,
-            side: THREE.DoubleSide
+            wireframe: false
         });
 
         this.explosionEffect = new THREE.Mesh(geometry, material);
@@ -143,7 +118,6 @@ export class Smartbomb {
         );
         this.scene.add(this.explosionEffect);
 
-        // Animate expansion
         let scale = 0.1;
         const maxScale = this.range / 100;
         const interval = setInterval(() => {
@@ -161,18 +135,12 @@ export class Smartbomb {
         }, 50);
     }
 
-    /**
-     * Toggle range indicator visibility
-     */
     toggleRangeIndicator(visible) {
         if (this.rangeIndicator) {
             this.rangeIndicator.visible = visible;
         }
     }
 
-    /**
-     * Get smartbomb status
-     */
     getStatus() {
         return {
             isActive: this.isActive,
@@ -184,9 +152,6 @@ export class Smartbomb {
         };
     }
 
-    /**
-     * Cleanup
-     */
     dispose() {
         if (this.rangeIndicator) {
             this.scene.remove(this.rangeIndicator);

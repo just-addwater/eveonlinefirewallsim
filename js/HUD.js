@@ -7,7 +7,6 @@ import { Utils } from './Utils.js';
 
 export class HUD {
     constructor() {
-        // Get all HUD elements
         this.elements = {
             shieldBar: document.getElementById('shield-bar'),
             shieldValue: document.getElementById('shield-value'),
@@ -54,29 +53,23 @@ export class HUD {
         ];
 
         this.currentTipIndex = 0;
+        this.frameCounter = 0;
         this.setupEventListeners();
 
-        // Rotate tips every 15 seconds
         setInterval(() => this.rotateTip(), 15000);
     }
 
-    /**
-     * Setup event listeners for HUD interactions
-     */
     setupEventListeners() {
-        // Overview toggle
         this.elements.overviewToggle.addEventListener('click', () => {
             this.elements.overviewContent.classList.toggle('collapsed');
             this.elements.overviewToggle.textContent =
                 this.elements.overviewContent.classList.contains('collapsed') ? '▶' : '▼';
         });
 
-        // Help toggle
         this.elements.helpToggle.addEventListener('click', () => {
             this.elements.helpContent.classList.toggle('hidden');
         });
 
-        // Radial menu options
         document.querySelectorAll('.radial-option').forEach(option => {
             option.addEventListener('click', (e) => {
                 const action = e.target.dataset.action;
@@ -86,18 +79,18 @@ export class HUD {
         });
     }
 
-    /**
-     * Update all HUD elements
-     */
     update(battleship, enemies, missiles, stats) {
+        // Throttle updates to every 3rd frame for performance
+        if (!this.frameCounter) this.frameCounter = 0;
+        this.frameCounter++;
+        if (this.frameCounter % 3 !== 0) return;
+
         const status = battleship.getStatus();
 
-        // Update tank bars
         this.updateBar(this.elements.shieldBar, this.elements.shieldValue, status.shield);
         this.updateBar(this.elements.armorBar, this.elements.armorValue, status.armor);
         this.updateBar(this.elements.capBar, this.elements.capValue, status.capacitor);
 
-        // Update module status
         this.updateModuleStatus(
             this.elements.smartbombStatus,
             this.elements.smartbombState,
@@ -119,28 +112,17 @@ export class HUD {
             status.mwdActive ? `ACTIVE (${Math.ceil(status.mwdCycleRemaining / 1000)}s)` : 'OFFLINE'
         );
 
-        // Update overview
         this.updateOverview(battleship, enemies, missiles);
-
-        // Update statistics
         this.updateStatistics(stats);
-
-        // Update speed
         this.elements.speedValue.textContent = Math.round(status.velocity) + ' m/s';
     }
 
-    /**
-     * Update a status bar
-     */
     updateBar(barElement, valueElement, percentage) {
         const clamped = Math.max(0, Math.min(100, percentage));
         barElement.style.width = clamped + '%';
         valueElement.textContent = Math.round(clamped) + '%';
     }
 
-    /**
-     * Update module status display
-     */
     updateModuleStatus(moduleElement, stateElement, isActive, stateText) {
         if (isActive) {
             moduleElement.classList.add('active');
@@ -154,21 +136,16 @@ export class HUD {
         stateElement.textContent = stateText;
     }
 
-    /**
-     * Update overview table
-     */
     updateOverview(battleship, enemies, missiles) {
         const tbody = this.elements.overviewTable;
         tbody.innerHTML = '';
 
-        // Add enemies
         enemies.forEach(enemy => {
             const info = enemy.getInfo();
             const row = this.createOverviewRow(info, 'enemy');
             tbody.appendChild(row);
         });
 
-        // Add active missiles (limit to 20 most recent)
         const activeMissiles = missiles.filter(m => m.alive).slice(-20);
         activeMissiles.forEach(missile => {
             const info = missile.getInfo();
@@ -177,9 +154,6 @@ export class HUD {
         });
     }
 
-    /**
-     * Create overview table row
-     */
     createOverviewRow(info, type) {
         const row = document.createElement('tr');
         row.classList.add(type);
@@ -194,9 +168,6 @@ export class HUD {
         return row;
     }
 
-    /**
-     * Update statistics panel
-     */
     updateStatistics(stats) {
         this.elements.missilesLaunched.textContent = stats.missilesLaunched;
         this.elements.missilesDestroyed.textContent = stats.missilesDestroyed;
@@ -210,26 +181,17 @@ export class HUD {
         this.elements.efficiencyFill.style.width = Math.min(100, efficiency) + '%';
     }
 
-    /**
-     * Rotate to next tip
-     */
     rotateTip() {
         this.currentTipIndex = (this.currentTipIndex + 1) % this.tips.length;
         this.elements.currentTip.textContent = this.tips[this.currentTipIndex];
     }
 
-    /**
-     * Show radial menu at position
-     */
     showRadialMenu(x, y) {
         this.elements.radialMenu.style.left = x + 'px';
         this.elements.radialMenu.style.top = y + 'px';
         this.elements.radialMenu.classList.remove('hidden');
     }
 
-    /**
-     * Hide radial menu
-     */
     hideRadialMenu() {
         this.elements.radialMenu.classList.add('hidden');
     }

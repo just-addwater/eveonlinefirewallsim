@@ -14,16 +14,16 @@ export class Battleship {
         this.position = { x: 0, y: 0, z: 0 };
         this.velocity = { x: 0, y: 0, z: 0 };
         this.targetPosition = null;
-        this.navigationMode = null; // 'approach', 'orbit', 'keeprange'
+        this.navigationMode = null;
         this.navigationTarget = null;
 
         // Ship stats
-        this.baseSpeed = 125; // m/s
+        this.baseSpeed = 125;
         this.currentSpeed = 0;
         this.maxSpeed = this.baseSpeed;
-        this.signatureRadius = 400; // meters
+        this.signatureRadius = 400;
         this.baseSignatureRadius = 400;
-        this.mass = 100000000; // 100,000,000 kg
+        this.mass = 100000000;
         this.inertiaModifier = 0.1;
 
         // Tank stats
@@ -33,51 +33,38 @@ export class Battleship {
         this.currentArmor = 8000;
         this.maxCapacitor = 5000;
         this.currentCapacitor = 5000;
-        this.capacitorRecharge = 100; // per tick
+        this.capacitorRecharge = 100;
 
         // Propulsion modules
         this.afterburnerActive = false;
-        this.afterburnerBoost = 1.5; // +150%
-        this.afterburnerSigPenalty = 1.1; // +10%
-        this.afterburnerCapCost = 50; // per tick
+        this.afterburnerBoost = 1.5;
+        this.afterburnerSigPenalty = 1.1;
+        this.afterburnerCapCost = 50;
 
         this.mwdActive = false;
-        this.mwdBoost = 5.0; // +500%
-        this.mwdSigPenalty = 6.0; // +500%
-        this.mwdCapCost = 200; // per tick
-        this.mwdCycleTime = 10000; // 10 seconds
+        this.mwdBoost = 5.0;
+        this.mwdSigPenalty = 6.0;
+        this.mwdCapCost = 200;
+        this.mwdCycleTime = 10000;
         this.mwdCycleRemaining = 0;
 
-        // Smartbomb
-        this.smartbomb = new Smartbomb(scene, this);
-
-        // Create 3D mesh
         this.createMesh();
+        this.smartbomb = new Smartbomb(this.scene, this);
     }
 
-    /**
-     * Create battleship 3D model
-     */
     createMesh() {
-        // Main hull (simplified battleship shape)
-        const hullGeometry = new THREE.CylinderGeometry(30, 50, 150, 8);
-        const hullMaterial = new THREE.MeshPhongMaterial({
-            color: 0x4a5568,
-            emissive: 0x2563eb,
-            emissiveIntensity: 0.2,
-            shininess: 30
-        });
+        this.mesh = new THREE.Group();
 
-        this.mesh = new THREE.Mesh(hullGeometry, hullMaterial);
-        this.mesh.rotation.z = Math.PI / 2;
+        // Main hull (optimized)
+        const hullGeometry = new THREE.CylinderGeometry(20, 30, 100, 6);
+        const hullMaterial = new THREE.MeshLambertMaterial({ color: 0x2a5a7a });
+        const hull = new THREE.Mesh(hullGeometry, hullMaterial);
+        hull.rotation.z = Math.PI / 2;
+        this.mesh.add(hull);
 
-        // Add wings
-        const wingGeometry = new THREE.BoxGeometry(100, 5, 40);
-        const wingMaterial = new THREE.MeshPhongMaterial({
-            color: 0x334155,
-            emissive: 0x1e40af,
-            emissiveIntensity: 0.1
-        });
+        // Wings (optimized)
+        const wingGeometry = new THREE.BoxGeometry(80, 5, 40);
+        const wingMaterial = new THREE.MeshLambertMaterial({ color: 0x1a3a4a });
 
         const wing1 = new THREE.Mesh(wingGeometry, wingMaterial);
         wing1.position.set(0, 30, 0);
@@ -94,40 +81,26 @@ export class Battleship {
             transparent: true,
             opacity: 0.7
         });
-
         const engine = new THREE.Mesh(engineGeometry, engineMaterial);
         engine.rotation.z = Math.PI / 2;
-        engine.position.x = -90;
+        engine.position.x = -65;
         this.mesh.add(engine);
 
-        // Add point lights for engines
-        const engineLight = new THREE.PointLight(0x00d4ff, 2, 200);
-        engineLight.position.x = -90;
+        // Engine light (optimized)
+        const engineLight = new THREE.PointLight(0x00d4ff, 1, 150);
+        engineLight.position.set(-65, 0, 0);
         this.mesh.add(engineLight);
 
         this.scene.add(this.mesh);
     }
 
-    /**
-     * Update battleship (called every tick)
-     */
     update(deltaTime) {
-        // Update propulsion modules
         this.updatePropulsion(deltaTime);
-
-        // Update navigation
         this.updateNavigation(deltaTime);
-
-        // Recharge capacitor
         this.rechargeCapacitor();
-
-        // Update smartbomb
         this.smartbomb.update();
-
-        // Update mesh position
         this.mesh.position.set(this.position.x, this.position.y, this.position.z);
 
-        // Calculate current total speed
         this.currentSpeed = Math.sqrt(
             this.velocity.x * this.velocity.x +
             this.velocity.y * this.velocity.y +
@@ -135,11 +108,7 @@ export class Battleship {
         );
     }
 
-    /**
-     * Update propulsion modules
-     */
     updatePropulsion(deltaTime) {
-        // Calculate max speed based on active modules
         this.maxSpeed = this.baseSpeed;
         this.signatureRadius = this.baseSignatureRadius;
 
@@ -167,12 +136,8 @@ export class Battleship {
         }
     }
 
-    /**
-     * Update navigation based on mode
-     */
     updateNavigation(deltaTime) {
         if (!this.targetPosition) {
-            // Slow down if no target
             this.velocity.x *= 0.95;
             this.velocity.y *= 0.95;
             this.velocity.z *= 0.95;
@@ -188,20 +153,16 @@ export class Battleship {
         const distance = Math.sqrt(direction.x * direction.x + direction.y * direction.y + direction.z * direction.z);
 
         if (distance < 100) {
-            // Reached target
             this.targetPosition = null;
             return;
         }
 
         const normalized = Utils.normalize(direction);
-
-        // Apply acceleration towards target
         const acceleration = this.maxSpeed * 0.3;
         this.velocity.x += normalized.x * acceleration * deltaTime;
         this.velocity.y += normalized.y * acceleration * deltaTime;
         this.velocity.z += normalized.z * acceleration * deltaTime;
 
-        // Limit to max speed
         const currentVel = Math.sqrt(this.velocity.x * this.velocity.x + this.velocity.y * this.velocity.y + this.velocity.z * this.velocity.z);
         if (currentVel > this.maxSpeed) {
             const ratio = this.maxSpeed / currentVel;
@@ -210,12 +171,10 @@ export class Battleship {
             this.velocity.z *= ratio;
         }
 
-        // Update position
         this.position.x += this.velocity.x * deltaTime;
         this.position.y += this.velocity.y * deltaTime;
         this.position.z += this.velocity.z * deltaTime;
 
-        // Rotate ship to face movement direction
         if (currentVel > 1) {
             this.mesh.lookAt(
                 this.position.x + this.velocity.x,
@@ -225,9 +184,6 @@ export class Battleship {
         }
     }
 
-    /**
-     * Recharge capacitor
-     */
     rechargeCapacitor() {
         this.currentCapacitor = Math.min(
             this.maxCapacitor,
@@ -235,50 +191,31 @@ export class Battleship {
         );
     }
 
-    /**
-     * Navigate to position
-     */
     navigateTo(position, mode = 'approach') {
         this.targetPosition = { ...position };
         this.navigationMode = mode;
     }
 
-    /**
-     * Toggle afterburner
-     */
     toggleAfterburner() {
         this.afterburnerActive = !this.afterburnerActive;
         return this.afterburnerActive;
     }
 
-    /**
-     * Activate MWD
-     */
     activateMWD() {
         if (this.mwdActive) return false;
-
         this.mwdActive = true;
         this.mwdCycleRemaining = this.mwdCycleTime;
         return true;
     }
 
-    /**
-     * Activate smartbomb
-     */
     activateSmartbomb(missiles) {
         return this.smartbomb.activate(missiles);
     }
 
-    /**
-     * Toggle smartbomb range indicator
-     */
     toggleSmartbombIndicator(visible) {
         this.smartbomb.toggleRangeIndicator(visible);
     }
 
-    /**
-     * Take damage
-     */
     takeDamage(damage) {
         if (this.currentShield > 0) {
             this.currentShield -= damage;
@@ -294,9 +231,6 @@ export class Battleship {
         }
     }
 
-    /**
-     * Get ship status
-     */
     getStatus() {
         return {
             position: { ...this.position },
