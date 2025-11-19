@@ -4,176 +4,282 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EVE Online - Firewalling Simulator</title>
-    <meta name="description" content="Practice missile firewalling mechanics from EVE Online in this 3D web simulator">
-    <link rel="stylesheet" href="css/style.css">
+    <title>EVE Firewall Simulator</title>
+    <style>
+        /* --- CORE EVE UI AESTHETICS --- */
+        :root {
+            --eve-bg: rgba(15, 15, 17, 0.85);
+            --eve-border: rgba(255, 255, 255, 0.15);
+            --eve-text: #cdcdcd;
+            --eve-accent-green: #24da24;
+            --eve-accent-red: #d12828;
+            --eve-glass: blur(4px);
+        }
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #000;
+            color: var(--eve-text);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-size: 12px;
+            user-select: none;
+        }
+
+        #game-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            background: radial-gradient(circle at center, #111 0%, #000 100%);
+        }
+
+        /* --- OVERVIEW (Right Panel) --- */
+        #overview-panel {
+            position: absolute;
+            right: 20px;
+            top: 20px;
+            width: 350px;
+            height: 400px;
+            background: var(--eve-bg);
+            backdrop-filter: var(--eve-glass);
+            border: 1px solid var(--eve-border);
+            display: flex;
+            flex-direction: column;
+            z-index: 10;
+        }
+
+        .window-header {
+            padding: 5px 10px;
+            background: rgba(255, 255, 255, 0.05);
+            font-weight: bold;
+            border-bottom: 1px solid var(--eve-border);
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .overview-content {
+            flex-grow: 1;
+            overflow-y: auto;
+            font-family: 'Consolas', monospace;
+        }
+
+        .overview-row {
+            display: flex;
+            padding: 3px 5px;
+            cursor: pointer;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .overview-row:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .col-icon {
+            width: 25px;
+            text-align: center;
+        }
+
+        .col-dist {
+            width: 80px;
+            text-align: right;
+            padding-right: 15px;
+        }
+
+        .col-name {
+            flex-grow: 1;
+            color: #fff;
+        }
+
+        .col-type {
+            width: 60px;
+            color: #aaa;
+        }
+
+        /* --- HUD (Bottom Center) --- */
+        #hud-container {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            align-items: flex-end;
+            gap: 8px;
+            z-index: 10;
+        }
+
+        .capacitor-ui {
+            width: 110px;
+            height: 110px;
+            border-radius: 50%;
+            border: 2px solid var(--eve-border);
+            background: radial-gradient(circle, transparent 60%, rgba(255, 255, 255, 0.05) 61%);
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+        }
+
+        .speed-display {
+            position: absolute;
+            bottom: -25px;
+            width: 100%;
+            text-align: center;
+            font-size: 14px;
+            color: #fff;
+            text-shadow: 0 2px 4px black;
+        }
+
+        .module-btn {
+            width: 60px;
+            height: 60px;
+            background: rgba(20, 20, 20, 0.9);
+            border: 1px solid #444;
+            position: relative;
+            cursor: pointer;
+        }
+
+        .module-btn:hover {
+            border-color: #888;
+        }
+
+        /* Module States */
+        .module-btn.active-green {
+            box-shadow: inset 0 0 0 2px var(--eve-accent-green), 0 0 10px var(--eve-accent-green);
+        }
+
+        .module-btn.active-red {
+            box-shadow: inset 0 0 0 2px var(--eve-accent-red), 0 0 10px var(--eve-accent-red);
+        }
+
+        .mod-icon {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            color: #555;
+        }
+
+        .icon-sb {
+            background: radial-gradient(circle, #500 0%, transparent 70%);
+            color: #aaa;
+        }
+
+        .icon-mwd {
+            background: linear-gradient(45deg, transparent 40%, #004466 50%, transparent 60%);
+            color: #aaa;
+        }
+
+        .cooldown-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.6);
+            height: 0%;
+        }
+
+        /* --- ALERTS --- */
+        #message-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 20;
+        }
+
+        .floating-text {
+            position: absolute;
+            top: 30%;
+            left: 50%;
+            font-size: 20px;
+            font-weight: bold;
+            text-shadow: 0 0 5px black;
+            animation: floatUp 1.5s ease-out forwards;
+        }
+
+        @keyframes floatUp {
+            to {
+                opacity: 0;
+                transform: translateY(-50px);
+            }
+        }
+
+        @keyframes fadeInOut {
+            0% {
+                opacity: 0;
+                transform: scale(0.9);
+            }
+
+            10% {
+                opacity: 1;
+                transform: scale(1);
+            }
+
+            80% {
+                opacity: 1;
+                transform: scale(1);
+            }
+
+            100% {
+                opacity: 0;
+                transform: scale(1.1);
+            }
+        }
+    </style>
+  <script type="module" crossorigin src="/just-addwater/eveonlinefirewallsim/assets/index-Bk0OTttX.js"></script>
 </head>
 
 <body>
-    <!-- Loading Screen -->
-    <div id="loading-screen">
-        <div class="loading-content">
-            <h1>EVE ONLINE FIREWALLING SIMULATOR</h1>
-            <div class="loading-bar">
-                <div class="loading-progress" id="loading-progress"></div>
-            </div>
-            <p id="loading-text">Initializing simulation...</p>
+    <canvas id="game-container"></canvas>
+
+    <!-- Overview -->
+    <div id="overview-panel">
+        <div class="window-header">
+            <span>OVERVIEW</span>
+            <span>≡</span>
+        </div>
+        <div class="window-header" style="font-size:10px; background:none; border:none; opacity:0.7;">
+            <span style="width:25px"></span>
+            <span style="width:80px; text-align:right;">Distance</span>
+            <span style="flex-grow:1; padding-left:15px;">Name</span>
+            <span style="width:60px">Type</span>
+        </div>
+        <div class="overview-content" id="overview-list"></div>
+    </div>
+
+    <!-- HUD -->
+    <div id="hud-container">
+        <!-- F1 Smartbomb -->
+        <div class="module-btn" id="mod-f1">
+            <div class="cooldown-overlay" id="cd-f1"></div>
+            <div class="mod-icon icon-sb">SB</div>
+        </div>
+
+        <!-- Capacitor -->
+        <div class="capacitor-ui">
+            <div class="cap-fill"></div>
+            <div style="z-index:2; font-size:11px;">100%</div>
+            <div class="speed-display">0 m/s</div>
+        </div>
+
+        <!-- F3 MWD -->
+        <div class="module-btn" id="mod-f3">
+            <div class="cooldown-overlay" id="cd-f3"></div>
+            <div class="mod-icon icon-mwd">MWD</div>
         </div>
     </div>
 
-    <!-- Main Game Container -->
-    <div id="game-container">
-        <!-- 3D Canvas -->
-        <canvas id="game-canvas"></canvas>
-
-        <!-- HUD Overlay -->
-        <div id="hud">
-            <!-- Top Bar -->
-            <div id="top-bar">
-                <div class="ship-status">
-                    <h2>BATTLESHIP</h2>
-                    <div class="status-bar">
-                        <span>Shield:</span>
-                        <div class="bar">
-                            <div class="bar-fill shield-bar" id="shield-bar"></div>
-                        </div>
-                        <span id="shield-value">100%</span>
-                    </div>
-                    <div class="status-bar">
-                        <span>Armor:</span>
-                        <div class="bar">
-                            <div class="bar-fill armor-bar" id="armor-bar"></div>
-                        </div>
-                        <span id="armor-value">100%</span>
-                    </div>
-                    <div class="status-bar">
-                        <span>Capacitor:</span>
-                        <div class="bar">
-                            <div class="bar-fill cap-bar" id="cap-bar"></div>
-                        </div>
-                        <span id="cap-value">100%</span>
-                    </div>
-                </div>
-
-                <div class="module-status">
-                    <h3>MODULES</h3>
-                    <div class="module" id="smartbomb-status">
-                        <span class="module-icon">💣</span>
-                        <span>Smartbomb</span>
-                        <span class="module-state" id="smartbomb-state">OFFLINE</span>
-                    </div>
-                    <div class="module" id="ab-status">
-                        <span class="module-icon">🔥</span>
-                        <span>Afterburner</span>
-                        <span class="module-state" id="ab-state">OFFLINE</span>
-                    </div>
-                    <div class="module" id="mwd-status">
-                        <span class="module-icon">⚡</span>
-                        <span>MWD</span>
-                        <span class="module-state" id="mwd-state">OFFLINE</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Overview Panel -->
-            <div id="overview-panel">
-                <div class="panel-header">
-                    <h3>OVERVIEW</h3>
-                    <button id="overview-toggle">▼</button>
-                </div>
-                <div class="panel-content" id="overview-content">
-                    <table id="overview-table">
-                        <thead>
-                            <tr>
-                                <th>Name</th>
-                                <th>Distance</th>
-                                <th>Velocity</th>
-                                <th>Type</th>
-                            </tr>
-                        </thead>
-                        <tbody id="overview-tbody">
-                            <!-- Populated dynamically -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- Statistics Panel -->
-            <div id="stats-panel">
-                <h3>FIREWALLING STATISTICS</h3>
-                <div class="stat-row">
-                    <span>Missiles Launched:</span>
-                    <span id="missiles-launched">0</span>
-                </div>
-                <div class="stat-row">
-                    <span>Missiles Destroyed:</span>
-                    <span id="missiles-destroyed">0</span>
-                </div>
-                <div class="stat-row">
-                    <span>Efficiency:</span>
-                    <span id="efficiency">0%</span>
-                </div>
-                <div class="stat-row">
-                    <span>Smartbomb Cycles:</span>
-                    <span id="smartbomb-cycles">0</span>
-                </div>
-                <div class="efficiency-bar">
-                    <div class="efficiency-fill" id="efficiency-fill"></div>
-                </div>
-                <div id="tip-box">
-                    <strong>TIP:</strong> <span id="current-tip">Position between fleet and enemies for optimal
-                        coverage</span>
-                </div>
-            </div>
-
-            <!-- Speed Indicator -->
-            <div id="speed-indicator">
-                <div class="speed-value" id="speed-value">0 m/s</div>
-                <div class="speed-label">VELOCITY</div>
-            </div>
-
-            <!-- Radial Menu (Hidden by default) -->
-            <div id="radial-menu" class="hidden">
-                <div class="radial-option" data-action="approach">Approach</div>
-                <div class="radial-option" data-action="orbit">Orbit at 5km</div>
-                <div class="radial-option" data-action="keeprange">Keep at Range 10km</div>
-                <div class="radial-option" data-action="stop">Stop Ship</div>
-            </div>
-        </div>
-
-        <!-- Controls Help -->
-        <div id="controls-help">
-            <button id="help-toggle">?</button>
-            <div id="help-content" class="hidden">
-                <h3>CONTROLS</h3>
-                <ul>
-                    <li><strong>Left Click:</strong> Navigate / Select</li>
-                    <li><strong>Right Click:</strong> Radial Menu</li>
-                    <li><strong>Mouse Drag:</strong> Rotate Camera</li>
-                    <li><strong>Mouse Wheel:</strong> Zoom</li>
-                    <li><strong>SPACE:</strong> Toggle Smartbomb</li>
-                    <li><strong>A:</strong> Toggle Afterburner</li>
-                    <li><strong>SHIFT:</strong> Activate MWD (10s)</li>
-                    <li><strong>TAB:</strong> Toggle Overview</li>
-                    <li><strong>ESC:</strong> Cancel Selection</li>
-                </ul>
-            </div>
-        </div>
-    </div>
-
-    <!-- Three.js Library -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-
-    <!-- Game Scripts -->
-    <script type="module" src="js/Utils.js"></script>
-    <script type="module" src="js/Missile.js"></script>
-    <script type="module" src="js/Smartbomb.js"></script>
-    <script type="module" src="js/Battleship.js"></script>
-    <script type="module" src="js/EnemyShip.js"></script>
-    <script type="module" src="js/InputController.js"></script>
-    <script type="module" src="js/HUD.js"></script>
-    <script type="module" src="js/SimulationManager.js"></script>
-    <script type="module" src="js/main.js"></script>
+    <div id="message-layer"></div>
+
 </body>
 
 </html>
